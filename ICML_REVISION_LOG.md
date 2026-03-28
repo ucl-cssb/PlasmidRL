@@ -25,16 +25,18 @@ All generation uses vLLM with these parameters unless otherwise noted:
 
 ---
 
-## Key Finding: GRPO Model vs RL Model
+## Key Finding: GRPO Model is the Best Model
 
-The GRPO model (UCL-CSSB/PlasmidGPT-GRPO) achieves **better quality-diversity tradeoff** than the RL model (McClain/PlasmidGPT-RL):
+The GRPO model (UCL-CSSB/PlasmidGPT-GRPO) achieves the best quality-diversity tradeoff. At temp=1.0: **71.6% QC pass rate with 0.573 diversity**.
 
-### Temperature Sweep — GRPO Model
+The RL model (McClain/PlasmidGPT-RL) has mode collapse: diversity ~0.13 regardless of temperature.
+
+### Temperature Sweep — GRPO Model (UCL-CSSB/PlasmidGPT-GRPO)
 | Temp | Pass Rate | Diversity | Mean Length |
 |------|-----------|-----------|-------------|
 | 0.3 | 0.1% | — | 4,772 |
 | 0.5 | 2.2% | — | 5,595 |
-| 0.9 | **58.0%** | **0.558** | 6,439 |
+| 0.9 | 58.0% | 0.558 | 6,439 |
 | **1.0** | **71.6%** | **0.573** | 6,517 |
 
 ### Temperature Sweep — RL Model (McClain/PlasmidGPT-RL)
@@ -46,15 +48,27 @@ The GRPO model (UCL-CSSB/PlasmidGPT-GRPO) achieves **better quality-diversity tr
 | 0.8 | 53.7% | 0.132 | 4,897 |
 | 0.95 | 53.7% | 0.132 | 4,897 |
 
-**Key observations:**
-- **GRPO at temp=1.0 is the best configuration**: 71.6% pass rate with 0.573 diversity
-- **RL model has mode collapse**: diversity ~0.13 at all temperatures — temperature doesn't help
-- **GRPO is temperature-sensitive**: needs temp ≥0.9 to work, but when it does, it's better on both axes
-- **RL is temperature-robust**: 50-54% pass rate from 0.3 to 0.95, but stuck at low diversity
+---
+
+## Rejection Sampling Baselines (COMPLETE)
+
+| Method | Model | Passed | Total | Pass Rate | Diversity | Mean Length |
+|--------|-------|--------|-------|-----------|-----------|-------------|
+| Rejection (10K) | Base | 275 | 10,000 | 2.8% | 1.000 | 2,746 |
+| Rejection (10K) | SFT | 254 | 10,000 | 2.5% | 1.000 | 2,737 |
+| Rejection (10K) | **GRPO** | **6,457** | **10,000** | **64.6%** | **0.581** | 6,915 |
+| Best-of-16 | Base | 467 | 16,000 | 2.9% | 0.999 | 2,752 |
+| Best-of-16 | SFT | 442 | 16,000 | 2.8% | 1.000 | 2,767 |
+| Best-of-16 | **GRPO** | **10,343** | **16,000** | **64.6%** | **0.549** | 6,902 |
+
+**Findings:**
+- Best-of-16 doesn't help Base/SFT (2.9% vs 2.8%) — generating 16× more samples barely moves the needle
+- GRPO rejection sampling already at 64.6% — random sampling from GRPO produces mostly valid plasmids
+- GRPO maintains high diversity (0.55) even in rejection sampling — no mode collapse
 
 ---
 
-## Ablation Study Results (temp=0.95)
+## Ablation Study Results (temp=0.95, COMPLETE)
 
 All results at temperature=0.95, 4000 sequences per model.
 
@@ -70,33 +84,24 @@ All results at temperature=0.95, 4000 sequences per model.
 | RL (CDS only) | 2.4% | 1.000 | 2,012 | 0.392 | 87 | 0.241 | 6 |
 
 ### RL (full reward) — Per-Prompt Breakdown (temp=0.95)
-| Prompt | N | Passed | Pass Rate | Diversity | Mean Length |
-|---|---|---|---|---|---|
-| ATG | 500 | 491 | 98.2% | 0.134 | 4,074 |
-| Random 25bp | 500 | 491 | 98.2% | 0.098 | 4,045 |
-| Random 10bp | 500 | 483 | 96.6% | 0.134 | 4,098 |
-| Dual cassette | 500 | 496 | 99.2% | 0.080 | 4,292 |
-| p15A ORI | 500 | 141 | 28.2% | 0.815 | 4,245 |
-| KanR cassette | 500 | 37 | 7.4% | 0.858 | 6,263 |
-| GFP cassette | 500 | 10 | 2.0% | 0.711 | 8,032 |
-| pUC19 ORI | 500 | 0 | 0.0% | 0.099 | 4,124 |
+| Prompt | Passed | Pass Rate | Diversity | Mean Length |
+|---|---|---|---|---|
+| ATG | 491/500 | 98.2% | 0.134 | 4,074 |
+| Random 25bp | 491/500 | 98.2% | 0.098 | 4,045 |
+| Random 10bp | 483/500 | 96.6% | 0.134 | 4,098 |
+| Dual cassette | 496/500 | 99.2% | 0.080 | 4,292 |
+| p15A ORI | 141/500 | 28.2% | 0.815 | 4,245 |
+| KanR cassette | 37/500 | 7.4% | 0.858 | 6,263 |
+| GFP cassette | 10/500 | 2.0% | 0.711 | 8,032 |
+| pUC19 ORI | 0/500 | 0.0% | 0.099 | 4,124 |
 
 ### Ablation Findings
-1. **RL improves QC 15× over Base/SFT** (53.7% vs 3.6%)
-2. **Removing repeat penalty or length prior improves pass rate** (72% vs 54%) — these constrain too aggressively
-3. **Cassette bonus is the most critical component** — removing it drops to 19.8%
-4. **CDS detection alone doesn't work** (2.4%) — worse than untrained Base
-5. **Short/random prompts work best** — ATG gets 98%, structured prompts (GFP, KanR) struggle
-6. **Full RL has best composition** (lowest JSD) but lowest diversity (0.132)
-
-### Rejection Sampling Baselines (temp=0.95)
-| Model | Rejection (10K) | Best-of-16 (1K) |
-|-------|----------------|-----------------|
-| Base | 10K samples, mean reward 0.260 | mean reward 0.730 |
-| SFT | 10K samples, mean reward 0.382 | mean reward 0.985 |
-| GRPO | 10K samples generated | 16K generated for selection |
-
-Rejection sampling sequences for Base, SFT, and GRPO saved to bucket.
+1. RL improves QC **15× over Base/SFT** (53.7% vs 3.6%)
+2. Removing repeat penalty or length prior **improves** pass rate (72% vs 54%) — over-constraining
+3. Cassette bonus is the **most critical component** — removing it drops to 19.8%
+4. CDS detection alone doesn't work (2.4%) — worse than Base
+5. Short/random prompts work best (98%) — structured prompts (GFP, KanR) struggle
+6. Full RL has best composition (lowest JSD) but lowest diversity (0.132)
 
 ---
 
@@ -104,36 +109,15 @@ Rejection sampling sequences for Base, SFT, and GRPO saved to bucket.
 
 ### HuggingFace Bucket: `https://huggingface.co/buckets/McClain/PlasmidRL`
 
-```
-McClain/PlasmidRL bucket (~750MB)
-├── analysis/
-│   ├── full_ablation_metrics.csv
-│   └── rl_per_prompt_metrics.csv
-├── baselines/
-│   ├── rejection_sampling/{Base,SFT,GRPO}/outputs.csv + metadata.json
-│   └── best_of_16/{Base,SFT,GRPO}/outputs.csv + metadata.json
-├── generations/
-│   ├── temp_0.8/{8 models}/outputs.csv + metadata.json
-│   ├── temp_0.95/{8 models}/outputs.csv + metadata.json
-│   └── temp_1.1/{8 models}/outputs.csv + metadata.json
-└── qc_results/
-    └── {Base,SFT,RL,RL_cds_only,RL_length_only,RL_no_cassette,RL_no_length,RL_no_repeat}/
-        passed.csv, failed.csv, repeats.csv, qc_summary.csv,
-        aggregate_ori_calls.csv, aggregate_amr_calls.csv
-```
+All experimental data is stored here. See bucket contents summary below.
 
-### On g6-big: `/home/ubuntu/Projects/PhD/analysis2/results/`
-- Temperature sweep data (0.3, 0.5, 0.7, 1.0) for RL and GRPO models
-- QC results for all sweep temperatures
-- Not yet uploaded to bucket — upload pending
-
-### HuggingFace Model Repos (all saved)
+### HuggingFace Model Repos
 | Model | HF Repo |
 |-------|---------|
 | Base | UCL-CSSB/PlasmidGPT |
 | SFT | UCL-CSSB/PlasmidGPT-SFT |
-| GRPO (main RL) | UCL-CSSB/PlasmidGPT-GRPO |
-| RL (alt) | McClain/PlasmidGPT-RL |
+| GRPO (best model) | UCL-CSSB/PlasmidGPT-GRPO |
+| RL (mode collapsed) | McClain/PlasmidGPT-RL |
 | Ablation: cds_only | McClain/plasmidgpt-rl-cds_only |
 | Ablation: no_repeat_penalty | McClain/plasmidgpt-rl-no_repeat_penalty |
 | Ablation: no_length_prior | McClain/plasmidgpt-rl-no_length_prior |
@@ -141,7 +125,7 @@ McClain/PlasmidRL bucket (~750MB)
 | Ablation: length_only | McClain/plasmidgpt-rl-length_only |
 
 ### W&B: `ucl-cssb/plasmid-rl-icml-revision`
-- Training curves for all 5 ablation runs
+- Training curves for all 5 ablation runs (reward components per step)
 
 ---
 
@@ -163,27 +147,25 @@ Run on g6-big (AWS g6e, NVIDIA L4):
 - **AMRFinderPlus 4.2.7** for antibiotic resistance gene detection
 - **Prodigal 2.6.3** for gene prediction
 - **Repeat detection** via suffix arrays (≥50bp threshold)
-- **Two-stage filtering**: relaxed detection → strict validation (ORI ≥99% identity, AMR ≥100%)
-- Bio tools via micromamba at `/opt/dlami/nvme/icml_eval/mamba/envs/bio/`
+- **Two-stage filtering**: relaxed detection → strict validation (ORI ≥99%, AMR ≥100%)
 
 ---
 
 ## Timeline
 
-- **March 24** — ablation configs, training infrastructure, all 5 ablation jobs launched on Anyscale
-- **March 25** — baselines ran, cds_only done, eval pipeline debugging (AMRFinder issues on Anyscale)
-- **March 26** — all 5 ablation models trained and on HF, generation data (3 temps × 8 models) on bucket
-- **March 27** — QC on g6-big with working AMRFinder, full ablation metrics, temp sweeps for RL and GRPO, rejection sampling data saved to bucket
-- **March 28** — GRPO identified as better model (higher diversity at comparable pass rate)
+- **March 24** — ablation configs, training infrastructure, all 5 ablation jobs launched
+- **March 25** — cds_only done, eval pipeline debugging (AMRFinder on Anyscale)
+- **March 26** — all 5 ablation models trained and on HF, generation data on bucket
+- **March 27** — QC on g6-big, full ablation metrics, temp sweeps for RL and GRPO
+- **March 28** — rejection sampling QC complete, GRPO identified as best model, all data on bucket
 
 ---
 
 ## Still TODO
 
-- [ ] Upload temperature sweep data from g6-big to bucket
-- [ ] Run full QC on GRPO model at temp=0.95 and temp=1.0 with per-prompt breakdown
 - [ ] ViennaRNA MFE density comparison (RNA vs DNA parameters)
 - [ ] PLSDB expanded reference panel for JSD comparison
 - [ ] Publication figures
 - [ ] Component reuse analysis (ORI/AMR identity distributions)
+- [ ] Per-prompt breakdown for GRPO at temp=1.0
 - [ ] Verify extracted prompt sequences are real motifs
