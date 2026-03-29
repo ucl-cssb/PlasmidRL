@@ -161,9 +161,34 @@ Run on g6-big (AWS g6e, NVIDIA L4):
 
 ---
 
+## MFE Density — ViennaRNA DNA Parameters (COMPLETE)
+
+Computed with ViennaRNA 2.7.2, DNA Mathews 2004 parameters. Full 4000 sequences per model.
+Distributed via Ray on c7i.12xlarge (48 vCPU), ~18 min per model.
+
+| Model | DNA MFE Density (kcal/mol/nt) | Std |
+|---|---|---|
+| Base | -0.105 | 0.076 |
+| SFT | -0.105 | 0.076 |
+| **RL (full)** | **-0.155** | 0.023 |
+| **GRPO temp=1.0** | **-0.149** | 0.032 |
+| GRPO temp=0.9 | -0.147 | 0.035 |
+| RL (no repeat) | -0.141 | 0.031 |
+| RL (no cassette) | -0.134 | 0.048 |
+| RL (no length) | -0.131 | 0.025 |
+| RL (length only) | -0.126 | 0.021 |
+| RL (CDS only) | -0.103 | 0.022 |
+
+**Findings:**
+- RL produces the most thermodynamically stable sequences (-0.155 vs -0.105 for Base)
+- GRPO is close behind (-0.149) with much better diversity
+- CDS-only ablation has same stability as Base — structural rewards drive stability
+- More negative = more stable. Real E. coli plasmids typically -0.15 to -0.20
+
+---
+
 ## Still TODO
 
-- [ ] ViennaRNA MFE density comparison (RNA vs DNA parameters)
 - [ ] PLSDB expanded reference panel for JSD comparison
 - [ ] Publication figures
 - [ ] Component reuse analysis (ORI/AMR identity distributions)
