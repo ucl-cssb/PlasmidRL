@@ -187,10 +187,26 @@ Distributed via Ray on c7i.12xlarge (48 vCPU), ~18 min per model.
 
 ---
 
+## Addgene 500 Reference Panel (COMPLETE)
+
+500 random plasmids from 115K Addgene sequences (>500bp). Provides ground truth for comparison.
+
+| Metric | Addgene 500 | GRPO temp=1.0 | RL (full) | Base |
+|---|---|---|---|---|
+| Length | 7,469 ± 2,983 | 6,517 | 4,897 | 1,792 |
+| GC | 0.510 ± 0.031 | — | 0.528 | 0.481 |
+| Median ORF | 464 aa | — | 286 aa | 4 aa |
+| **MFE (DNA)** | **-0.151 ± 0.014** | **-0.149 ± 0.032** | **-0.155 ± 0.023** | -0.105 ± 0.076 |
+
+**GRPO and RL MFE densities match real plasmids almost exactly.** Base is far off.
+
+Data in bucket: `reference/addgene_reference_500.csv`, `reference/addgene_reference_metrics.csv`, `reference/addgene_500_3mer_freqs.json`
+
+---
+
 ## Still TODO
 
-- [ ] PLSDB expanded reference panel for JSD comparison
 - [ ] Publication figures
 - [ ] Component reuse analysis (ORI/AMR identity distributions)
 - [ ] Per-prompt breakdown for GRPO at temp=1.0
-- [ ] Verify extracted prompt sequences are real motifs
+- [ ] Recompute 3-mer JSD against expanded 500-plasmid reference (currently using 11)
