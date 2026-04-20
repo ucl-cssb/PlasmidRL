@@ -1,8 +1,7 @@
-"""
-Evaluate Base and SFT models on 8-prompt protocol (500 seqs per prompt = 4000 total).
+"""Evaluate Base and SFT models on the 8-prompt protocol (500 seqs/prompt = 4000 total).
 
-Matches the GRPO_temp1.0 evaluation for direct comparison.
-Outputs per-sequence metrics CSV and summary stats.
+Matches the GRPO_temp1.0 evaluation for direct comparison. Outputs per-sequence
+metrics CSV and summary stats.
 
 Usage:
     python scripts/eval_base_sft.py --output-dir /opt/dlami/nvme/eval_results
@@ -16,7 +15,11 @@ from pathlib import Path
 import pandas as pd
 from vllm import LLM, SamplingParams
 
-# ── 8 prompts matching GRPO_temp1.0 evaluation ────────────────────────
+from src.ablations import get_ablation_config
+from src.rewards.bioinformatics.scorer import Scorer
+
+# 8 prompts matching the GRPO_temp1.0 evaluation. First element is the name
+# used in output filenames; second is the actual sequence fed to the model.
 PROMPTS = [
     ("ATG", "ATG"),
     ("GFP_cassette", "TTTACGGCTAGCTCAGTCCTAGGTATAGTGCTAGCTACTAGAGAAAGAGGAGAAATACTAAATGATGCGTAAAGGAGAAGAACTTTTCACTGGAGTTGTCCCAATTCTTGTTGAATTAGATGGTGATGTTAATGGGCACAAATTTTCTGTCAGTGGAGAGGGTGAAGGTGATGCAACATACGGAAAACTTACCCTTAAATTTATTTGCACTACTGGAAAACTACCTGTTCCATGGCCAACACTTGTCACTACTTTCGGTTATGGTGTTCAATGCTTTGCGAGATACCCAGATCATATGAAACAGCATGACTTTTTCAAGAGTGCCATGCCCGAAGGTTATGTACAGGAAAGAACTATATTTTTCAAAGATGACGGGAACTACAAGACACGTGCTGAAGTCAAGTTTGAAGGTGATACCCTTGTTAATAGAATCGAGTTAAAAGGTATTGATTTTAAAGAAGATGGAAACATTCTTGGACACAAATTGGAATACAACTATAACTCACACAATGTATACATCATGGCAGACAAACAAAAGAATGGAATCAAAGTTAACTTCAAAATTAGACACAACATTGAAGATGGAAGCGTTCAACTAGCAGACCATTATCAACAAAATACTCCAATTGGCGATGGCCCTGTCCTTTTACCAGACAACCATTACCTGTCCACACAATCTGCCCTTTCGAAAGATCCCAACGAAAAGAGAGATCACATGGTCCTTCTTGAGTTTGTAACAGCTGCTGGGATTACACATGGCATGGATGAACTATACAAATAATAAAGGTCCAGGCATCAAATAAAACGAAAGGCTCAGTCGAAAGACTGGGCCTTTCGTTTTATCTGTTGTTTGTCGGTGAACGCTCTCTACTAGAGTCACACTGGCTCACCTTCGGGTGGGCCTTTCTGCGTTTATA"),
@@ -94,31 +97,16 @@ def jsd_3mer(seq: str, ref_freqs: dict | None = None) -> float:
     return jsd
 
 
-def run_qc(seq: str) -> bool:
-    """Simplified QC: check length, GC, and basic structure.
-
-    For proper QC we'd use the Scorer, but that requires plasmidkit
-    databases. This uses the Scorer if available, falls back to basic checks.
-    """
-    try:
-        from src.ablations import get_ablation_config
-        from src.rewards.bioinformatics.scorer import Scorer
-
-        scorer = Scorer(get_ablation_config("full_reward"))
-        reward, components = scorer.score(seq)
-        # QC pass = reward > threshold (the scorer checks ORI, AMR, repeats)
-        n_ori = components.get("ori_count", 0)
-        n_amr = components.get("marker_count", 0)
-        has_repeat = components.get("repeat_count", 0) > 0
-        return n_ori == 1 and n_amr >= 1 and not has_repeat
-    except Exception as e:
-        print(f"  Scorer failed ({e}), using basic QC")
-        # Basic fallback: length in range and reasonable GC
-        gc = compute_gc(seq)
-        return 2000 <= len(seq) <= 15000 and 0.35 <= gc <= 0.65
+def run_qc(seq: str, scorer: Scorer) -> bool:
+    """QC pass = exactly one ORI, at least one AMR marker, no long repeats."""
+    _, components = scorer.score(seq)
+    n_ori = components.get("ori_count", 0)
+    n_amr = components.get("marker_count", 0)
+    has_repeat = components.get("repeat_count", 0) > 0
+    return n_ori == 1 and n_amr >= 1 and not has_repeat
 
 
-def evaluate_model(model_name: str, model_path: str, output_dir: Path):
+def evaluate_model(model_name: str, model_path: str, output_dir: Path, scorer: Scorer):
     print(f"\n{'='*60}")
     print(f"Evaluating {model_name}: {model_path}")
     print(f"{'='*60}")
@@ -154,7 +142,7 @@ def evaluate_model(model_name: str, model_path: str, output_dir: Path):
             gc = compute_gc(cleaned)
             orf = longest_orf_aa(cleaned)
             jsd = jsd_3mer(cleaned)
-            qc = run_qc(cleaned)
+            qc = run_qc(cleaned, scorer)
             if qc:
                 passed += 1
 
@@ -232,10 +220,11 @@ def main():
     if args.model:
         models = {args.model: MODELS[args.model]}
 
+    scorer = Scorer(get_ablation_config("full_reward"))
     for name, path in models.items():
-        evaluate_model(name, path, output_dir)
+        evaluate_model(name, path, output_dir, scorer)
 
-    print("\nDone!")
+    print("\nDone.")
 
 
 if __name__ == "__main__":

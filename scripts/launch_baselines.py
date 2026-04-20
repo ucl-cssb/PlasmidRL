@@ -10,6 +10,7 @@ Usage:
 import argparse
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 
@@ -49,11 +50,11 @@ def main():
         "--env", f"HF_TOKEN={os.environ.get('HF_TOKEN', '')}",
         "--",
         "python", "anyscale/run_baselines.py",
-        f"--n-samples", str(args.n_samples),
-        f"--best-of-n", str(args.best_of_n),
+        "--n-samples", str(args.n_samples),
+        "--best-of-n", str(args.best_of_n),
     ]
 
-    print(f"Submitting rejection sampling baseline job...")
+    print("Submitting rejection sampling baseline job...")
     if args.dry_run:
         print(f"[DRY RUN] {' '.join(cmd)}")
         return
@@ -61,7 +62,7 @@ def main():
     result = subprocess.run(cmd, capture_output=True, text=True)
     print(result.stdout)
     if result.returncode != 0:
-        print(f"ERROR: {result.stderr}")
+        sys.exit(f"ERROR: {result.stderr}")
 
 
 if __name__ == "__main__":

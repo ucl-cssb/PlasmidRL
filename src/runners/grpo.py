@@ -152,118 +152,96 @@ def run_grpo(ablation_name: str = "full_reward"):
     evaluator = Evaluator(eval_config)
     eval_callback = EvalCallback(evaluator)
 
-    # HF model repo for this ablation
     hf_repo = f"McClain/plasmidgpt-rl-{ablation_name}"
 
-    # Callback to push checkpoints to HuggingFace
     class HFPushCallback(TrainerCallback):
-        """Push model checkpoints to HuggingFace Hub on save."""
+        """Push each on_save checkpoint to HuggingFace as a revision.
+
+        Transient HF failures are logged but do not stop training; the local
+        checkpoint is still on disk / S3 and the final push at end of train()
+        will raise if that one fails.
+        """
 
         def on_save(self, args, state, control, **kwargs):
             step = state.global_step
+            model = kwargs.get("model")
+            if model is None or not hasattr(model, "push_to_hub"):
+                return
             try:
-                model = kwargs.get("model")
-                if model is not None and hasattr(model, "push_to_hub"):
-                    model.push_to_hub(
-                        hf_repo,
-                        revision=f"step-{step}",
-                        commit_message=f"Checkpoint at step {step}",
-                        private=True,
-                    )
-                    print(f"[HFPush] Pushed checkpoint step {step} to {hf_repo}")
+                model.push_to_hub(
+                    hf_repo,
+                    revision=f"step-{step}",
+                    commit_message=f"Checkpoint at step {step}",
+                    private=True,
+                )
+                print(f"[HFPush] Pushed checkpoint step {step} to {hf_repo}")
             except Exception as e:
-                print(f"[HFPush] Warning: Failed to push step {step}: {e}")
+                print(f"[HFPush] Intermediate push failed at step {step}: {e}")
 
-    # Sample table logging callback
     class SampleTableCallback(TrainerCallback):
-        """Log sample sequences to W&B every 250 steps."""
+        """Log up to 10 sample (prompt, completion, reward) rows to W&B every 250 steps."""
 
         def __init__(self):
             self._step_samples: list = []
 
         def record_samples(self, prompts: List[str], completions: List[str], rewards: List[float]):
-            """Record samples from the current batch for potential logging."""
             self._step_samples = list(zip(prompts, completions, rewards))
 
         def on_step_end(self, args, state, control, **kwargs):
             if state.global_step % 250 != 0 or not self._step_samples:
                 return
-            # Take up to 10 samples
-            samples = self._step_samples[:10]
             table = wandb.Table(
                 columns=["prompt_prefix", "completion", "reward", "length_bp"],
-                data=[
-                    [p[:50], c[:500], round(r, 4), len(c)]
-                    for p, c, r in samples
-                ],
+                data=[[p[:50], c[:500], round(r, 4), len(c)]
+                      for p, c, r in self._step_samples[:10]],
             )
-            try:
-                wandb.log({"samples/examples": table}, step=state.global_step)
-            except Exception as e:
-                print(f"[SampleTable] Warning: Failed to log: {e}")
+            wandb.log({"samples/examples": table}, step=state.global_step)
             self._step_samples = []
 
     sample_callback = SampleTableCallback()
     hf_push_callback = HFPushCallback()
 
-    # Reward function
     def score_single(idx_and_seq):
-        """Score a single sequence and log components thread-safely."""
+        """Score a single sequence and log components thread-safely.
+
+        A scoring failure on one sample is logged and treated as reward 0.0 so
+        that a single malformed generation does not abort a multi-hour run.
+        The failed sample is still penalized by the 0.0 reward.
+        """
         idx, seq = idx_and_seq
         try:
             score, components = scorer.score(seq)
-            with component_lock:
-                reward_logger.add_components(components, float(score))
-            return float(score), components
         except Exception as e:
-            print(f"Warning: Failed to score completion {idx} (len={len(seq)}): {str(e)[:100]}")
+            print(f"[Scorer] Sample {idx} (len={len(seq)}) failed: {str(e)[:200]}")
             return 0.0, None
+        with component_lock:
+            reward_logger.add_components(components, float(score))
+        return float(score), components
 
     def batch_reward_fn(prompts: List[str], completions: List[str], **kwargs) -> List[float]:
-        """Compute rewards for a batch of completions."""
-        # Clean sequences: remove non-DNA characters
         cleaned = [re.sub(r'[^ATCG]', '', c.upper().replace(" ", "")) for c in completions]
-
-        # Parallelize scoring
         with ThreadPoolExecutor(max_workers=8) as executor:
             results = list(executor.map(score_single, enumerate(cleaned)))
-
         rewards = [r[0] for r in results]
-
-        # Record samples for table logging
         sample_callback.record_samples(prompts, cleaned, rewards)
-
         return rewards
 
-    # Data locations
-    s3_base = f"s3://phd-research-storage-1758274488/icml-revision/ablations/{ablation_name}"
+    s3_base = f"s3://phd-research-storage-1758274488/ablations/{ablation_name}"
 
-    # Describe what this ablation disables
-    _ablation_descriptions = {
-        "full_reward": "Control run: all reward components enabled (identical to production config).",
-        "no_repeat_penalty": "Repeat penalty disabled (repeat_penalty_enabled=False). All other components active.",
-        "no_length_prior": "Length prior disabled (length_reward_mode=False). No reward/penalty based on sequence length.",
-        "no_cassette_bonus": "Cassette arrangement bonus disabled (location_aware=False). CDS detection still active via Prodigal.",
-        "cds_only": "Only CDS scoring active. All other component weights zeroed. No length, repeat, or cassette rewards.",
-        "length_only": "Only length prior active. All annotation-based scoring at epsilon weight (0.001).",
-    }
-
-    # Initialize W&B
     wandb_run = wandb.init(
         project="plasmid-rl-icml-revision",
         entity=cfg.wandb_entity,
         name=run_name,
         group="ablation-training",
-        tags=["icml-revision", ablation_name],
+        tags=["ablation", ablation_name],
         notes=(
-            f"ICML revision ablation: {ablation_name}\n\n"
-            f"{_ablation_descriptions.get(ablation_name, '')}\n\n"
-            f"## Data Locations\n"
-            f"- **HuggingFace model**: https://huggingface.co/{hf_repo}\n"
-            f"- **S3 checkpoints**: {s3_base}/checkpoints/\n"
-            f"- **S3 wandb logs**: {s3_base}/wandb/\n"
-            f"- **Base model**: {cfg.model}\n"
-            f"- **Training data**: {cfg.train_dataset}\n"
+            f"Ablation `{ablation_name}` — see src/ablations.py for the disabled components.\n\n"
+            f"Data locations:\n"
+            f"- HuggingFace model: https://huggingface.co/{hf_repo}\n"
+            f"- S3 checkpoints: {s3_base}/checkpoints/\n"
+            f"- S3 wandb logs: {s3_base}/wandb/\n"
+            f"- Base model: {cfg.model}\n"
+            f"- Training data: {cfg.train_dataset}\n"
         ),
         config={
             "ablation_config": ablation_name,
@@ -316,24 +294,18 @@ def run_grpo(ablation_name: str = "full_reward"):
     print(f"Starting training with {args.num_train_epochs} epochs...")
     trainer.train()
 
-    # Save final model and tokenizer
     print(f"Saving final model to {checkpoint_dir}...")
     trainer.save_model(checkpoint_dir)
     tok.save_pretrained(checkpoint_dir)
 
-    # Push final model to HuggingFace
-    try:
-        trainer.model.push_to_hub(
-            hf_repo,
-            commit_message=f"Final checkpoint at step {trainer.state.global_step}",
-            private=True,
-        )
-        tok.push_to_hub(hf_repo, private=True)
-        print(f"Final model pushed to {hf_repo}")
-    except Exception as e:
-        print(f"Warning: Failed to push final model to HF: {e}")
+    trainer.model.push_to_hub(
+        hf_repo,
+        commit_message=f"Final checkpoint at step {trainer.state.global_step}",
+        private=True,
+    )
+    tok.push_to_hub(hf_repo, private=True)
+    print(f"Final model pushed to {hf_repo}")
 
-    # Log final checkpoint as W&B artifact
     artifact = wandb.Artifact(
         name=f"model-{run_name}",
         type="model",
@@ -342,8 +314,7 @@ def run_grpo(ablation_name: str = "full_reward"):
     artifact.add_dir(checkpoint_dir)
     wandb_run.log_artifact(artifact)
 
-    print(f"Training complete! Model saved to {checkpoint_dir}")
+    print(f"Training complete. Model saved to {checkpoint_dir}")
     print(f"Model artifact logged to W&B: {wandb_run.url}")
 
-    # Finish run
     wandb.finish()

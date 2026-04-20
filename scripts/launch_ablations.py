@@ -14,9 +14,17 @@ import subprocess
 import sys
 from pathlib import Path
 
+from src.ablations import ABLATION_NAMES
+
+
+# Skip `full_reward` — it is equivalent to the production run whose checkpoint
+# is already on HF, so we only launch the ablation variants here.
+ABLATION_CONFIGS = [name for name in ABLATION_NAMES if name != "full_reward"]
+COMPUTE_CONFIG = "plasmid-ablation-l40s"
+
 
 def load_dotenv():
-    """Load .env file into os.environ if keys not already set."""
+    """Load `.env` at repo root into os.environ for keys not already set."""
     env_path = Path(__file__).resolve().parent.parent / ".env"
     if not env_path.exists():
         return
@@ -29,19 +37,6 @@ def load_dotenv():
         value = value.strip().strip('"').strip("'")
         if key and not os.environ.get(key):
             os.environ[key] = value
-
-
-# Skip full_reward — reusing existing checkpoint
-ABLATION_CONFIGS = [
-    "no_repeat_penalty",
-    "no_length_prior",
-    "no_cassette_bonus",
-    "cds_only",
-    "length_only",
-]
-
-# Use existing Anyscale compute config with L40S
-COMPUTE_CONFIG = "plasmid-ablation-l40s"
 
 
 def launch_job(config_name: str, dry_run: bool = False) -> str | None:

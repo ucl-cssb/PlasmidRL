@@ -251,25 +251,12 @@ class Evaluator(EvalRunner):
             
             # Clean sequence for analysis (remove non-DNA characters)
             cleaned_full = re.sub(r'[^ATCG]', '', full.upper())
-            
-            # Analyze sequence
-            try:
-                analysis = self.analyzer.analyze(cleaned_full)
-            except Exception as e:
-                print(f"[Evaluator] Warning: Failed to analyze sequence {idx}: {e}")
-                analysis = {
-                    "ori_count": 0,
-                    "ori_ids": "",
-                    "promoter_count": 0,
-                    "promoter_ids": "",
-                    "terminator_count": 0,
-                    "terminator_ids": "",
-                    "marker_count": 0,
-                    "marker_ids": "",
-                    "cds_count": 0,
-                    "cds_ids": "",
-                }
-            
+
+            # A failure here is a real bug (or a sequence that slipped past the
+            # DNA-cleaning step) — don't paper over it with zero counts, because
+            # downstream pass-rate metrics would then silently be wrong.
+            analysis = self.analyzer.analyze(cleaned_full)
+
             records.append({
                 "prompt": prompt,
                 "response": completion,
@@ -289,53 +276,39 @@ class Evaluator(EvalRunner):
         return EvaluationResult(dataframe=df, metrics=metrics)
     
     def _load_prompts(self) -> List[str]:
-        """
-        Load prompts from CSV/parquet file.
-        
-        Returns:
-            List of prompt strings
+        """Load prompts from the configured CSV/parquet file.
+
+        Falls back to the single config default_query prompt only when
+        `prompts_path` is empty — a missing or malformed file is an error, not
+        a fallback, because silently evaluating against one prompt when the
+        user expected many would invalidate the reported metrics.
         """
         if not self.config.prompts_path:
-            print("[Evaluator] Warning: No prompts_path specified, using default prompts")
-            return [self._get_default_prompts()]
-        
+            print("[Evaluator] No prompts_path configured; using default_query")
+            return [self.base_config.default_query]
+
         prompts_path = self.config.prompts_path
-        
-        # Check if file exists
         if not os.path.exists(prompts_path):
-            print(f"[Evaluator] Warning: Prompts file not found: {prompts_path}")
-            return [self._get_default_prompts()]
-        
-        try:
-            # Load based on file extension
-            if prompts_path.endswith('.parquet'):
-                df = pd.read_parquet(prompts_path)
-            elif prompts_path.endswith('.csv'):
-                df = pd.read_csv(prompts_path)
-            else:
-                print(f"[Evaluator] Warning: Unsupported file format: {prompts_path}")
-                return [self._get_default_prompts()]
-            
-            # Extract prompts column
-            if self.config.prompts_column not in df.columns:
-                print(f"[Evaluator] Warning: Column '{self.config.prompts_column}' not found in prompts file")
-                print(f"[Evaluator] Available columns: {list(df.columns)}")
-                return [self._get_default_prompts()]
-            
-            prompts = df[self.config.prompts_column].dropna().tolist()
-            prompts = [str(p).strip() for p in prompts if str(p).strip()]
-            
-            print(f"[Evaluator] Loaded {len(prompts)} prompts from {prompts_path}")
-            return prompts
-            
-        except Exception as e:
-            print(f"[Evaluator] Error loading prompts: {e}")
-            return [self._get_default_prompts()]
-    
-    def _get_default_prompts(self) -> str:
-        """Get default prompt if prompts file is not available."""
-        # Use the default query from config (GFP cassette)
-        return self.base_config.default_query
+            raise FileNotFoundError(f"Prompts file not found: {prompts_path}")
+
+        if prompts_path.endswith(".parquet"):
+            df = pd.read_parquet(prompts_path)
+        elif prompts_path.endswith(".csv"):
+            df = pd.read_csv(prompts_path)
+        else:
+            raise ValueError(f"Unsupported prompts file format: {prompts_path}")
+
+        col = self.config.prompts_column
+        if col not in df.columns:
+            raise KeyError(
+                f"Column {col!r} not in prompts file. Available: {list(df.columns)}"
+            )
+
+        prompts = [str(p).strip() for p in df[col].dropna() if str(p).strip()]
+        if not prompts:
+            raise ValueError(f"No non-empty prompts in column {col!r} of {prompts_path}")
+        print(f"[Evaluator] Loaded {len(prompts)} prompts from {prompts_path}")
+        return prompts
     
     def _initialize_model(self, checkpoint_path: str) -> None:
         """

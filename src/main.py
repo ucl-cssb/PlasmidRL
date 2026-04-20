@@ -1,6 +1,9 @@
-import click
 import os
+
+import click
 import torch.multiprocessing as mp
+
+from src.ablations import ABLATION_NAMES
 
 
 @click.group()
@@ -29,10 +32,7 @@ def train_grpo():
 @click.option(
     "--config-name",
     required=True,
-    type=click.Choice([
-        "full_reward", "no_repeat_penalty", "no_length_prior",
-        "no_cassette_bonus", "cds_only", "length_only",
-    ]),
+    type=click.Choice(ABLATION_NAMES),
     help="Ablation config name (see src/ablations.py)",
 )
 def train_ablation(config_name: str):
@@ -68,14 +68,8 @@ def convert_checkpoint(checkpoint_path: str, hf_repo: str):
 
     click.echo(f"Converting checkpoint from {checkpoint_path}")
     click.echo(f"Target HuggingFace repo: {hf_repo}")
-
-    try:
-        result_url = checkpoint_to_huggingface(s3_client, checkpoint_path, hf_repo)
-        click.echo(f"Successfully converted and uploaded checkpoint")
-        click.echo(f"Model available at: {result_url}")
-    except Exception as e:
-        click.echo(f"Error: {e}", err=True)
-        raise
+    url = checkpoint_to_huggingface(s3_client, checkpoint_path, hf_repo)
+    click.echo(f"Model available at: {url}")
 
 
 if __name__ == "__main__":
