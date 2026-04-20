@@ -13,6 +13,13 @@ outputs/
 /wandb
 /lightning_logs
 
+# Any per-sequence dump over a few MB belongs in the cloud, not git.
+experiments/data/**/*.parquet
+experiments/data/**/raw/
+experiments/data/**/*_seqs.csv
+# Local marimo state
+.marimo.toml
+
 # Distribution / packaging
 .Python
 build/

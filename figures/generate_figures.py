@@ -18,7 +18,7 @@ import seaborn as sns
 sns.set_theme(style="whitegrid", context="paper", font_scale=1.3)
 
 HERE = Path(__file__).resolve().parent
-DATA = HERE / "data"
+DATA = HERE.parent / "experiments" / "data"
 OUT = HERE
 
 # Map CSV model ids → display labels used in the figures.
