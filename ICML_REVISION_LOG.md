@@ -204,9 +204,111 @@ Data in bucket: `reference/addgene_reference_500.csv`, `reference/addgene_refere
 
 ---
 
+## Base/SFT Regeneration (COMPLETE)
+
+**Problem found:** Base and SFT generation CSVs on g6-big were identical (same md5 hash). Root cause: the `run_full_ablation_eval.py` pipeline downloaded cached data from the HF bucket via `download_existing_from_hf()`, and the bucket already contained identical files from an earlier buggy run. Every subsequent run skipped generation because `outputs.csv` already existed.
+
+**Fix:** Regenerated both models on g6-big using vLLM with correct checkpoints:
+- Base: `UCL-CSSB/PlasmidGPT` → 4,000 sequences, mean length 1,538 bp
+- SFT: `UCL-CSSB/PlasmidGPT-SFT` → 4,000 sequences, mean length 1,473 bp
+- Confirmed different: first sequences differ, md5 hashes differ
+
+**Note:** vLLM BPE tokenizer outputs spaces between tokens. FASTAs must strip spaces before running AMRFinder (which rejects whitespace characters).
+
+### Regenerated Base/SFT QC Results
+
+| Model | Passed | Total | Pass Rate |
+|---|---|---|---|
+| Base | 210 | 4,000 | 5.2% |
+| SFT | 191 | 4,000 | 4.8% |
+
+### Regenerated Base/SFT Metrics (QC-passed only)
+
+| Model | Mean GC | Median ORF (aa) | 3-mer JSD |
+|---|---|---|---|
+| Base | 0.504 | 319 | 0.082 |
+| SFT | 0.506 | 316 | 0.084 |
+
+### MFE for Base/SFT (all sequences, 16-core parallel)
+
+| Model | MFE Density (DNA) | Std |
+|---|---|---|
+| Base | -0.061 | 0.094 |
+| SFT | -0.059 | 0.093 |
+
+**Note:** Base/SFT all-sequence MFE is dragged toward 0 by many short/empty sequences (1,026 empty, 812 at 1-10bp). Short sequences (≤10bp) produce positive MFE density due to circular folding constraints. QC-passed MFE not computed separately.
+
+Data replaced on bucket: `evaluation/results/generations/{Base,SFT}/`, `evaluation/results/qc/{Base,SFT}/`
+
+---
+
+## GRPO temp=1.0 Per-Prompt Metrics (COMPLETE)
+
+| Prompt | Passed | Pass Rate | Mean GC | 3-mer JSD |
+|---|---|---|---|---|
+| ATG | 442/500 | 88.4% | 0.532 | 0.109 |
+| Random 10bp | 425/500 | 85.0% | 0.513 | 0.125 |
+| Random 25bp | 355/500 | 71.0% | 0.520 | 0.176 |
+| Dual cassette (300bp) | 483/500 | 96.6% | 0.527 | 0.079 |
+| KanR cassette (300bp) | 401/500 | 80.2% | 0.532 | 0.084 |
+| GFP cassette (917bp) | 275/500 | 55.0% | 0.500 | 0.104 |
+| pUC19 ORI (100bp) | 72/500 | 14.4% | 0.533 | 0.090 |
+| p15A ORI (100bp) | 410/500 | 82.0% | 0.537 | 0.098 |
+
+Total: 2,863/4,000 = 71.6%. Unique ORIs (passed): 1 (ColE1 — prompt set doesn't include ORI-forcing prompts beyond prefix hints).
+
+Data in bucket: `evaluation/results/analysis/grpo_temp1.0_metrics.csv`, `grpo_temp1.0_summary.json`
+
+---
+
+## GRPO Component Reuse — pLannotate (COMPLETE)
+
+Ran pLannotate (SnapGene database) on 1,000 random QC-passing GRPO sequences (16 parallel jobs via xargs).
+
+### Summary
+- **Sequences annotated:** 1,000
+- **Features per plasmid:** mean 18.4, median 21
+- **Unique ORI types:** 5 (ori/ColE1, f1 ori, p15A ori, mini-oriP, oriV)
+- **Unique CDS features:** 64
+- **Unique resistance markers:** TcR (1,807), KanR (898), AmpR (251), + GmR, HygR, PuroR
+
+### BLAST-based Component Reuse (from QC pipeline)
+- ORIs: 99.6% ColE1 at 99.5–99.8% identity, rare Col(pHAD28) and Col440I
+- AMR: aph(3')-Ia (72%), blaTEM-1 (21%), blaTEM-116 (4%), tet(C) (2%), 5 others <1% — all at 100% identity
+
+Data in bucket: `evaluation/results/plannotate/grpo_plannotate_1000.csv`
+
+---
+
+## Rebuttal Document (COMPLETE)
+
+Full point-by-point rebuttal written at `rebuttal.md`. Key structure:
+- General response summarizing all new experiments
+- Shared concerns: Ablation, Emergence taxonomy, Non-RL baselines, Diversity, Evaluation scale
+- Per-reviewer responses: MMB3 → 25NH → VevL → p9yJ
+
+### Supplementary Tables Website
+Anonymous S3 static site with ablation table and per-prompt breakdown:
+`http://icml-rebuttal-tables-6f3393db.s3-website-us-east-1.amazonaws.com`
+
+---
+
+## Timeline (Updated)
+
+- **March 24** — ablation configs, training infrastructure, all 5 ablation jobs launched
+- **March 25** — cds_only done, eval pipeline debugging (AMRFinder on Anyscale)
+- **March 26** — all 5 ablation models trained and on HF, generation data on bucket
+- **March 27** — QC on g6-big, full ablation metrics, temp sweeps for RL and GRPO
+- **March 28** — rejection sampling QC complete, GRPO identified as best model, all data on bucket
+- **March 29** — MFE with DNA params (Ray distributed), Addgene 500 reference panel
+- **March 30** — Base/SFT regeneration (found identical data bug), QC rerun, GRPO per-prompt metrics, pLannotate 1000 sequences, rebuttal draft written
+- **March 31** — Rebuttal revisions, supplementary tables website deployed
+
+---
+
 ## Still TODO
 
-- [ ] Publication figures
-- [ ] Component reuse analysis (ORI/AMR identity distributions)
-- [ ] Per-prompt breakdown for GRPO at temp=1.0
-- [ ] Recompute 3-mer JSD against expanded 500-plasmid reference (currently using 11)
+- [ ] Publication figures (update with new Base/SFT numbers)
+- [ ] Paper revision (main.tex) — insert ablation table, baselines, per-prompt, rewrite abstract
+- [ ] Add missing related work citations (Regulatory DNA RL, GENERator)
+- [ ] Fix numeric inconsistencies in paper (p9yJ concern)
