@@ -1,0 +1,9 @@
+{
+  "model": "GRPO_temp1.0",
+  "n_sequences": 4000,
+  "compute_time_sec": 1693.3,
+  "mfe_density_rna_mean": -0.322324,
+  "mfe_density_rna_std": 0.063387,
+  "mfe_density_dna_mean": -0.149078,
+  "mfe_density_dna_std": 0.032155
+}

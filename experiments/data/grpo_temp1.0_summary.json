@@ -1,0 +1,17 @@
+{
+  "model": "GRPO_temp1.0",
+  "n_sequences": 4000,
+  "n_passed": 2863,
+  "pass_rate": 0.71575,
+  "mean_gc": 0.5243008561873302,
+  "std_gc": 0.033639343949800955,
+  "mean_gc_passed": 0.5297561441319945,
+  "median_orf_aa": 319.0,
+  "median_orf_aa_passed": 319.0,
+  "mean_jsd_3mer": 0.10801807987381118,
+  "mean_jsd_3mer_passed": 0.08221514626886091,
+  "unique_oris": 1,
+  "ori_counts": {
+    "ColE1": 2863
+  }
+}

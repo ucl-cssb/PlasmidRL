@@ -1,0 +1,7 @@
+method,model,passed,total,pass_rate,diversity,mean_length
+rejection_sampling,Base,275,10000,2.8,0.9998,2746
+rejection_sampling,SFT,254,10000,2.5,0.9995,2737
+rejection_sampling,GRPO,6457,10000,64.6,0.581,6915
+best_of_16,Base,467,16000,2.9,0.9994,2752
+best_of_16,SFT,442,16000,2.8,0.9995,2767
+best_of_16,GRPO,10343,16000,64.6,0.5492,6902
