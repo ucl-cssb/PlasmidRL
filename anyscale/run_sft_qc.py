@@ -99,48 +99,75 @@ def _run_qc(sft_csv: Path, out_dir: Path):
     t0 = time.time()
     for i, row in df.iterrows():
         sid, seq = row["id"], row["full"]
-        annotations = scorer.annotator.annotate(seq)
+        if not seq:
+            summary_rows.append({
+                "sample": sid, "length": 0,
+                "n_ori": 0, "n_ori_strict": 0, "n_amr": 0, "n_amr_strict": 0,
+                "n_repeats": 0, "n_long_repeats": 0, "passed": False,
+            })
+            failed_rows.append({
+                "Plasmid_ID": sid, "Ori's present": "", "Identity of each ori": "",
+                "Cov of each ori": "", "ARG's present": "", "Identity of ARGs": "",
+                "Cov of ARGs": "", "reason": "empty sequence",
+            })
+            continue
+        annotations = scorer.annotate(seq)
 
-        oris, amrs, rpts = [], [], []
+        # plasmidkit evidence keys: motif, position, pct_identity, mismatches,
+        # max_mismatches, filtered_min_len. No explicit coverage — plasmidkit
+        # already filters low-coverage hits internally, so we treat any ORI/AMR
+        # it returns as having passed coverage. Use pct_identity for the
+        # identity column and the motif length as a coverage-proxy.
+        oris, amrs = [], []
         for a in annotations:
             atype = (a.type or "").lower()
-            identity = float(a.evidence.get("identity", 0.0)) if isinstance(a.evidence, dict) else 0.0
-            coverage = float(a.evidence.get("coverage", 0.0)) if isinstance(a.evidence, dict) else 0.0
+            evidence = a.evidence if isinstance(a.evidence, dict) else {}
+            identity = float(evidence.get("pct_identity", 0.0) or 0.0)
+            motif_len = len(evidence.get("motif", "") or "")
             if atype == "ori":
-                oris.append((a.id or "unknown", identity, coverage))
+                oris.append((a.id or "unknown", identity, motif_len))
                 ori_calls.append({
                     "sample": sid, "feature": a.id, "start": a.start, "end": a.end,
-                    "strand": a.strand, "identity": identity, "coverage": coverage,
+                    "strand": a.strand, "pct_identity": identity,
+                    "motif_length": motif_len,
                 })
             elif atype == "marker":
-                amrs.append((a.id or "unknown", identity, coverage))
+                amrs.append((a.id or "unknown", identity, motif_len))
                 amr_calls.append({
                     "sample": sid, "feature": a.id, "start": a.start, "end": a.end,
-                    "strand": a.strand, "identity": identity, "coverage": coverage,
+                    "strand": a.strand, "pct_identity": identity,
+                    "motif_length": motif_len,
                 })
 
-        repeat_regions = scorer._find_repeats(seq) if hasattr(scorer, "_find_repeats") else []
-        for r in repeat_regions:
-            rpts.append((r[0], r[1], r[1] - r[0]))
-            repeat_rows.append({"sample": sid, "start": r[0], "end": r[1], "length": r[1] - r[0]})
+        # _find_repeat_regions already applies repeat_min_length (50 bp) from config.
+        repeat_regions = scorer._find_repeat_regions(seq)
+        rpts = [(s, e, e - s) for s, e in repeat_regions]
+        for s, e, length in rpts:
+            repeat_rows.append({"sample": sid, "start": s, "end": e, "length": length})
 
+        # Strict identity filter matches analysis2 QC thresholds. Coverage is
+        # not directly exposed by plasmidkit; we approximate via the strict
+        # pct_identity cutoff alone (plasmidkit applies its own coverage
+        # threshold before returning hits).
         strict_oris = [(fid, ident, cov) for fid, ident, cov in oris
-                       if ident >= ORI_MIN_IDENTITY and cov >= ORI_MIN_COVERAGE]
+                       if ident >= ORI_MIN_IDENTITY]
         strict_amrs = [(fid, ident, cov) for fid, ident, cov in amrs
-                       if ident >= AMR_MIN_IDENTITY and cov >= AMR_MIN_COVERAGE]
-        long_repeats = [r for r in rpts if r[2] >= REPEAT_MIN_BP]
+                       if ident >= AMR_MIN_IDENTITY]
+        long_repeats = rpts  # scorer already filters by repeat_min_length (50 bp)
 
         n_ori, n_amr = len(strict_oris), len(strict_amrs)
         passed = (n_ori == 1 and n_amr >= 1 and not long_repeats)
 
+        # "Cov" columns report motif length (bp) since plasmidkit does not
+        # expose coverage directly. See docstring.
         base_row = {
             "Plasmid_ID": sid,
             "Ori's present": ";".join(o[0] for o in strict_oris),
             "Identity of each ori": ";".join(f"{o[1]:.2f}" for o in strict_oris),
-            "Cov of each ori": ";".join(f"{o[2]:.2f}" for o in strict_oris),
+            "Cov of each ori": ";".join(f"{o[2]}" for o in strict_oris),
             "ARG's present": ";".join(a[0] for a in strict_amrs),
             "Identity of ARGs": ";".join(f"{a[1]:.2f}" for a in strict_amrs),
-            "Cov of ARGs": ";".join(f"{a[2]:.2f}" for a in strict_amrs),
+            "Cov of ARGs": ";".join(f"{a[2]}" for a in strict_amrs),
         }
         if passed:
             passed_rows.append(base_row)
