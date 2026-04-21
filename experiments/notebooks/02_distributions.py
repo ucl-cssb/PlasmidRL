@@ -49,10 +49,10 @@ def _(mo):
         - *Longest ORF (aa)*: longest stretch of non-stop codons on the forward
           strand, in amino acids. Computed over all three reading frames.
 
-    Base and SFT per-sequence metrics are not included here because they are
-    not stored in this repo's `data/`; see `figures/data/full_ablation_metrics.csv`
-    for the aggregate means. Adding them requires re-running the per-sequence
-    metric script (in `analysis2/`) against their generation CSVs.
+    Base and SFT per-sequence metrics for T=1.0 are available in the HF
+    bucket under `eval_8prompt/{Base,SFT}/*_metrics.csv`; the files aren't
+    checked into `experiments/data/` to keep the repo light. Aggregate means
+    for the ablation grid live in `experiments/data/full_ablation_metrics.csv`.
     """
     )
     return

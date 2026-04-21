@@ -1,7 +1,4 @@
-import os
-
 import click
-import torch.multiprocessing as mp
 
 from src.ablations import ABLATION_NAMES
 
@@ -10,15 +7,6 @@ from src.ablations import ABLATION_NAMES
 def cli():
     """PlasmidRL: Reinforcement Learning for Plasmid Design"""
     pass
-
-
-@cli.command("train-es")
-def train_es():
-    """Train model using Evolution Strategies (ES)"""
-    from src.runners.es import main
-    os.environ["PYTHONWARNINGS"] = "ignore"
-    mp.set_start_method('spawn', force=True)
-    main()
 
 
 @cli.command("train-grpo")

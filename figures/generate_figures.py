@@ -1,6 +1,6 @@
 """Generate publication figures.
 
-All numeric values come from CSV/JSON files in `figures/data/`. The RL row in
+All numeric values come from CSV/JSON files in `experiments/data/`. The RL row in
 those files is GRPO at temperature=1.0 — the best configuration; ablation
 variants are trained from SFT with modified reward functions.
 """

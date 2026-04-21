@@ -1,9 +1,9 @@
 {
   "model": "SFT",
   "n_sequences": 4000,
-  "compute_time_sec": 13721.6,
-  "mfe_density_rna_mean": -0.222704,
-  "mfe_density_rna_std": 0.136832,
-  "mfe_density_dna_mean": -0.105497,
-  "mfe_density_dna_std": 0.075621
+  "compute_time_sec": 27293.0,
+  "mfe_density_rna_mean": -0.320612,
+  "mfe_density_rna_std": 0.049365,
+  "mfe_density_dna_mean": -0.149228,
+  "mfe_density_dna_std": 0.02843
 }
