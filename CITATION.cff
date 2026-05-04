@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+title: "PlasmidRL: Reinforcement learning for functional plasmid generation"
+message: "If you use this software or its results, please cite the accompanying paper."
+type: software
+authors:
+  - family-names: Thiel
+    given-names: McClain
+    affiliation: University College London
+repository-code: "https://github.com/UCL-CSSB/PlasmidRL"
+license: MIT
+preferred-citation:
+  type: conference-paper
+  title: "PlasmidRL: Reinforcement learning for functional plasmid generation"
+  authors:
+    - family-names: Thiel
+      given-names: McClain
+  conference:
+    name: "International Conference on Machine Learning (ICML)"
+  year: 2026

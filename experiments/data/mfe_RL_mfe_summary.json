@@ -1,9 +1,0 @@
-{
-  "model": "RL",
-  "n_sequences": 4000,
-  "compute_time_sec": 29814.4,
-  "mfe_density_rna_mean": -0.331755,
-  "mfe_density_rna_std": 0.034928,
-  "mfe_density_dna_mean": -0.154581,
-  "mfe_density_dna_std": 0.023313
-}

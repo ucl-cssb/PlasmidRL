@@ -233,3 +233,22 @@ __marimo__/
 /s3/
 checkpoints/
 outputs/
+
+# Internal — not for public release
+anyscale/
+.claude/
+AGENTS.md
+ICML_REVISION_LOG.md
+rebuttal.md
+reviews.md
+scripts/
+sweeps/
+experiments/
+
+# Training data — distributed via the public bucket, not git
+data/train.parquet
+data/test.parquet
+data/GFP_cassette.fasta
+
+# Old Jupyter notebooks superseded by marimo
+notebooks/*.ipynb
