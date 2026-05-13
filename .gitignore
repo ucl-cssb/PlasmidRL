@@ -250,5 +250,8 @@ data/train.parquet
 data/test.parquet
 data/GFP_cassette.fasta
 
-# Old Jupyter notebooks superseded by marimo
-notebooks/*.ipynb
+# Exported Jupyter notebooks are kept for GitHub rendering.
+
+# Rendered figures — regenerated from notebooks, not stored in git
+*.png
+*.pdf
