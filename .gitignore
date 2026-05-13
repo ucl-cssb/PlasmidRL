@@ -242,16 +242,19 @@ ICML_REVISION_LOG.md
 rebuttal.md
 reviews.md
 scripts/
+scripts_internal/
 sweeps/
 experiments/
 
-# Training data — distributed via the public bucket, not git
-data/train.parquet
-data/test.parquet
-data/GFP_cassette.fasta
+# Data — distributed via the public bucket, not git
+data/
+sft_real_outputs.csv
+sft_real_passed.csv
 
-# Exported Jupyter notebooks are kept for GitHub rendering.
-
-# Rendered figures — regenerated from notebooks, not stored in git
+# Paper figures — regenerated from notebooks, not stored in git
+paper/
 *.png
 *.pdf
+
+# macOS
+.DS_Store
