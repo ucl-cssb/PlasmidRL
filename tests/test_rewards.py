@@ -1,8 +1,10 @@
 import os
 import pytest
 
-from src.rewards.bioinformatics.scorer import Scorer
-from src.rewards.bioinformatics.reward_config import RewardConfig
+pytest.importorskip("plasmidkit", reason="requires plasmidrl[train]")
+
+from plasmidrl.rewards.bioinformatics.scorer import Scorer
+from plasmidrl.rewards.bioinformatics.reward_config import RewardConfig
 
 
 def _read_fasta_sequence(path: str) -> str:
