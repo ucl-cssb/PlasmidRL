@@ -63,8 +63,10 @@ def _(holdout):
          "n": len(holdout),
          "comp_mean": float(holdout[f"comp_{c}"].mean()),
          "comp_std": float(holdout[f"comp_{c}"].std()),
+         "comp_sem": float(holdout[f"comp_{c}"].sem()),
          "surp_mean": float(holdout[f"surp_{c}"].mean()),
-         "surp_std": float(holdout[f"surp_{c}"].std())}
+         "surp_std": float(holdout[f"surp_{c}"].std()),
+         "surp_sem": float(holdout[f"surp_{c}"].sem())}
         for c in cells
     ]
     return cells, headline_table
@@ -80,11 +82,11 @@ def _(headline_table):
 def _(FIGURE_DIR, cells, headline_table, plt, style):
     comp_means = [r["comp_mean"] for r in headline_table]
     surp_means = [r["surp_mean"] for r in headline_table]
-    comp_std = [r["comp_std"] for r in headline_table]
-    surp_std = [r["surp_std"] for r in headline_table]
+    comp_sem = [r["comp_sem"] for r in headline_table]
+    surp_sem = [r["surp_sem"] for r in headline_table]
 
     _fig, _ax = plt.subplots(figsize=(5.5, 4.2))
-    _bars = _ax.bar(cells, comp_means, yerr=comp_std,
+    _bars = _ax.bar(cells, comp_means, yerr=comp_sem,
                     color=[style.PALETTE[c] for c in cells],
                     edgecolor=style.EDGE, linewidth=1.0, alpha=0.9,
                     capsize=4, ecolor=style.EDGE)
@@ -99,13 +101,13 @@ def _(FIGURE_DIR, cells, headline_table, plt, style):
     _fig.savefig(FIGURE_DIR / "fig_completion_benchmark.pdf")
     _fig.savefig(FIGURE_DIR / "fig_completion_benchmark.png", dpi=200)
     _fig
-    return cells, comp_means, comp_std, surp_means, surp_std
+    return cells, comp_means, comp_sem, surp_means, surp_sem
 
 
 @app.cell
-def _(FIGURE_DIR, cells, plt, style, surp_means, surp_std):
+def _(FIGURE_DIR, cells, plt, style, surp_means, surp_sem):
     _fig, _ax = plt.subplots(figsize=(5.5, 4.2))
-    _bars = _ax.bar(cells, surp_means, yerr=surp_std,
+    _bars = _ax.bar(cells, surp_means, yerr=surp_sem,
                     color=[style.PALETTE[c] for c in cells],
                     edgecolor=style.EDGE, linewidth=1.0, alpha=0.9,
                     capsize=4, ecolor=style.EDGE)
