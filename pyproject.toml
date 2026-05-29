@@ -4,6 +4,33 @@ version = "0.1.0"
 description = "Reinforcement learning for plasmid sequence design (PlasmidRL, ICML 2026)"
 readme = "README.md"
 requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+    { name = "McClain Thiel" },
+    { name = "Angus G. Cunningham" },
+    { name = "Chris P. Barnes" },
+]
+keywords = [
+    "plasmid",
+    "DNA",
+    "reinforcement-learning",
+    "language-model",
+    "synthetic-biology",
+    "GRPO",
+    "PlasmidGPT",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 dependencies = [
     "biopython>=1.84",
     "click>=8.1.7",

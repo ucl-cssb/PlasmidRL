@@ -1,8 +1,8 @@
 # PlasmidRL
 
-Code for the ICML 2026 paper **PlasmidRL: Reinforcement learning for functional plasmid generation**.
+Code for the ICML 2026 paper **Effects of Structural Reward Shaping on Biophysical Properties in RL-Trained Plasmid Generators**.
 
-Plasmid sequences must satisfy a set of strict biological requirements — a functional origin of replication, selectable markers, appropriate coding elements, and length compatible with transformation — to be viable in the lab. Standard language model fine-tuning does not naturally enforce these constraints. We apply Group Relative Policy Optimization (GRPO) to PlasmidGPT, an autoregressive DNA language model, against a multi-component reward that encodes these requirements via automated bioinformatics annotation (BLAST, AMRFinderPlus, Prodigal). The RL-trained model substantially increases the QC pass rate over both the Base and SFT variants while retaining sequence diversity and held-out plasmid family coverage.
+Plasmid sequences must satisfy a set of strict biological requirements — a functional origin of replication, selectable markers, appropriate coding elements, and length compatible with transformation — to be viable in the lab. Standard language model fine-tuning does not naturally enforce these constraints. We apply Group Relative Policy Optimization (GRPO) to PlasmidGPT, an autoregressive DNA language model, against a multi-component reward that encodes these requirements via automated bioinformatics annotation (BLAST, AMRFinderPlus, Prodigal). The RL-trained model achieves a **71.6% QC pass rate** versus **4.3% for the pretrained baseline** (a ~17× improvement) across 8 prompts on 4,000 sequences, while retaining sequence diversity and matching real plasmid distributions on properties never directly rewarded.
 
 ## Models
 
@@ -12,7 +12,7 @@ Plasmid sequences must satisfy a set of strict biological requirements — a fun
 | PlasmidGPT-SFT | Supervised fine-tuned on Addgene corpus | [`UCL-CSSB/PlasmidGPT-SFT`](https://huggingface.co/UCL-CSSB/PlasmidGPT-SFT) |
 | PlasmidGPT-GRPO | GRPO RL fine-tuned — headline model | [`UCL-CSSB/PlasmidGPT-GRPO`](https://huggingface.co/UCL-CSSB/PlasmidGPT-GRPO) |
 
-Optimal sampling temperatures (used for all reported results): Base 1.00, SFT 1.00, RL 1.15. Deviating from these shifts pass rates by tens of percentage points and breaks comparability with the paper figures.
+Sampling temperatures used in the paper: the main 8-prompt evaluation (Table 1) uses T=1.00 for all three models; the reward-ablation panel (Table 7) uses T=0.95; the rejection-sampling protocol (Table 3) uses Base T=1.00, SFT T=1.00, RL T=1.15. Deviating from these shifts pass rates by tens of percentage points and breaks comparability with the paper figures.
 
 ## Data
 
@@ -30,7 +30,6 @@ plasmidrl/
   config.py                 training and sweep configuration (Pydantic)
 
 notebooks/                  marimo notebooks — one per results section of the paper
-anyscale/                   cluster evaluation runners (Ray / Anyscale)
 docker/                     Dockerfiles for TRL/GRPO training
 ```
 
@@ -78,8 +77,8 @@ Reference assets (ORI FASTA, annotation references) are not included in the repo
 
 ```bibtex
 @inproceedings{thiel2026plasmidrl,
-  title     = {PlasmidRL: Reinforcement learning for functional plasmid generation},
-  author    = {Thiel, McClain},
+  title     = {Effects of Structural Reward Shaping on Biophysical Properties in {RL}-Trained Plasmid Generators},
+  author    = {Thiel, McClain and Cunningham, Angus G. and Barnes, Chris P.},
   booktitle = {Proceedings of the 43rd International Conference on Machine Learning},
   year      = {2026},
 }
