@@ -117,7 +117,7 @@ def _(FIGURE_DIR, cells, plt, style, surp_means, surp_sem):
                  fontsize=9, fontweight="bold")
     _ax.set_ylabel("Mean Log-Probability")
     _ax.set_xlabel("Model")
-    _ax.set_title("Held-out surprisal (CDS / promoter junctions)", loc="left")
+    _ax.set_title("Held-out CDS-junction surprisal", loc="left")
     _fig.tight_layout()
     _fig.savefig(FIGURE_DIR / "fig_surprisal_benchmark.pdf")
     _fig.savefig(FIGURE_DIR / "fig_surprisal_benchmark.png", dpi=200)
