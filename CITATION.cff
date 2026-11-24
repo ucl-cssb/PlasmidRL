@@ -5,6 +5,7 @@ type: software
 authors:
   - family-names: Thiel
     given-names: McClain
+    orcid: "https://orcid.org/0000-0002-5633-6115"
     affiliation: University College London
   - family-names: Cunningham
     given-names: Angus G.
@@ -20,10 +21,16 @@ preferred-citation:
   authors:
     - family-names: Thiel
       given-names: McClain
+      orcid: "https://orcid.org/0000-0002-5633-6115"
     - family-names: Cunningham
       given-names: Angus G.
     - family-names: Barnes
       given-names: Chris P.
+  collection-title: "Proceedings of the 43rd International Conference on Machine Learning"
   conference:
     name: "International Conference on Machine Learning (ICML)"
+  volume: 306
+  publisher:
+    name: "PMLR"
   year: 2026
+  url: "https://openreview.net/forum?id=JAQ9bm0Rp4"

@@ -75,7 +75,11 @@ Reference assets (ORI FASTA, annotation references) are not included in the repo
 @inproceedings{thiel2026plasmidrl,
   title     = {Effects of Structural Reward Shaping on Biophysical Properties in {RL}-Trained Plasmid Generators},
   author    = {Thiel, McClain and Cunningham, Angus G. and Barnes, Chris P.},
-  booktitle = {Proceedings of the 43rd International Conference on Machine Learning},
+  booktitle = {Proceedings of the 43rd International Conference on Machine Learning (ICML)},
+  series    = {Proceedings of Machine Learning Research},
+  volume    = {306},
   year      = {2026},
+  publisher = {PMLR},
+  url       = {https://openreview.net/forum?id=JAQ9bm0Rp4},
 }
 ```
