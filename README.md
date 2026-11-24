@@ -80,6 +80,6 @@ Reference assets (ORI FASTA, annotation references) are not included in the repo
   volume    = {306},
   year      = {2026},
   publisher = {PMLR},
-  url       = {https://openreview.net/forum?id=JAQ9bm0Rp4},
+  url       = {https://openreview.net/forum?id=uiMxVE16m3},
 }
 ```
