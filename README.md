@@ -11,6 +11,7 @@ Plasmid sequences must satisfy a set of strict biological requirements — a fun
 | PlasmidGPT | Pretrained autoregressive plasmid LM | [`UCL-CSSB/PlasmidGPT`](https://huggingface.co/UCL-CSSB/PlasmidGPT) |
 | PlasmidGPT-SFT | Supervised fine-tuned on Addgene corpus | [`UCL-CSSB/PlasmidGPT-SFT`](https://huggingface.co/UCL-CSSB/PlasmidGPT-SFT) |
 | PlasmidGPT-GRPO | GRPO RL fine-tuned — headline model | [`UCL-CSSB/PlasmidGPT-GRPO`](https://huggingface.co/UCL-CSSB/PlasmidGPT-GRPO) |
+| PlasmidRL-ICML | Benchmark summaries & ablation configs | [`UCL-CSSB/PlasmidRL-ICML`](https://huggingface.co/datasets/UCL-CSSB/PlasmidRL-ICML) |
 
 Sampling temperatures used in the paper: the main 8-prompt evaluation (Table 1) uses T=1.00 for all three models; the reward-ablation panel (Table 7) uses T=0.95; the rejection-sampling protocol (Table 3) uses Base T=1.00, SFT T=1.00, RL T=1.15. Deviating from these shifts pass rates by tens of percentage points and breaks comparability with the paper figures.
 

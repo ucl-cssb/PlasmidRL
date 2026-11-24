@@ -79,6 +79,15 @@ dev = [
 [tool.uv.sources]
 plasmidkit = { git = "https://github.com/McClain-Thiel/plasmid-kit.git" }
 
+[project.urls]
+Homepage = "https://openreview.net/forum?id=uiMxVE16m3"
+Repository = "https://github.com/UCL-CSSB/PlasmidRL"
+Paper = "https://openreview.net/forum?id=uiMxVE16m3"
+Preprint = "https://doi.org/10.64898/2026.03.24.713963"
+Models = "https://huggingface.co/UCL-CSSB/PlasmidGPT-GRPO"
+Dataset = "https://huggingface.co/datasets/UCL-CSSB/PlasmidRL-ICML"
+Issues = "https://github.com/UCL-CSSB/PlasmidRL/issues"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
